@@ -30,7 +30,7 @@ The required backend structure includes `index.js`, `config`, `models`, `control
 
 - Dependencies for Express, Mongoose, CORS, dotenv, bcryptjs, and JSON Web Tokens are installed.
 - `server.js` starts an Express server on `PORT` or port 5000.
-- A basic `GET /api/health` endpoint is present.
+- A basic `GET /api/status` endpoint is present.
 - MongoDB connection setup is missing.
 - Required models, controllers, routes, middleware, and authorization logic are missing.
 - Backend `.env` and `.gitignore` files are missing.
@@ -78,7 +78,7 @@ Implementation will proceed one phase at a time. The next phase will not begin w
 - [x] Refactor `server.js` into `index.js`.
 - [x] Add centralized configuration and MongoDB connection.
 - [x] Add centralized error handling and environment validation.
-- [x] Verify the backend starts with the health route configured.
+- [x] Verify the backend starts with the status route configured.
 
 **Step 1 status:** Complete. Startup confirmed on port 5000; the sandbox blocked loopback HTTP verification.
 **Step 2 status:** Awaiting approval.
@@ -97,12 +97,14 @@ Implementation will proceed one phase at a time. The next phase will not begin w
 
 ### Step 3 - Authentication and authorization
 
-- [ ] Implement registration and login controllers.
-- [ ] Generate and verify JWT tokens.
-- [ ] Add authenticated and role-based middleware.
-- [ ] Implement user profile CRUD routes.
+- [x] Implement registration and login controllers.
+- [x] Generate and verify JWT tokens.
+- [x] Add authenticated and role-based middleware.
+- [x] Implement user profile CRUD routes.
 
-**Approval required before Step 3:** Yes
+**Step 3 status:** Complete.
+**Step 4 status:** Awaiting approval.
+**Approval required before Step 4:** Yes
 
 ### Step 4 - Product and order APIs
 
@@ -157,7 +159,7 @@ Implementation will proceed one phase at a time. The next phase will not begin w
 - [ ] Add route and API edge-case handling.
 - [ ] Verify responsive layouts.
 - [ ] Run frontend build and lint checks.
-- [ ] Smoke-test backend health and API flows.
+- [ ] Smoke-test backend status and API flows.
 
 **Approval required before Step 9:** Yes
 

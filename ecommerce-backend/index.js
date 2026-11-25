@@ -5,6 +5,8 @@ const express = require("express");
 
 const dbConnection = require("./config/dbConnection");
 const { errorHandler, notFound } = require("./middleware/errorHandler");
+const authenticationRoutes = require("./routes/authenticationRoutes");
+const userProfileRoutes = require("./routes/userProfileRoutes");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -16,12 +18,15 @@ app.use(
 );
 app.use(express.json());
 
-app.get("/api/health", (_req, res) => {
+app.get("/api/status", (_req, res) => {
   res.status(200).json({
     status: "ok",
     app: "Knit and Thread",
   });
 });
+
+app.use("/api/auth", authenticationRoutes);
+app.use("/api/profile", userProfileRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
