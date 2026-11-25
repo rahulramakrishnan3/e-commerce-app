@@ -53,6 +53,21 @@ export const createProduct = createAsyncThunk(
   },
 )
 
+export const createProducts = createAsyncThunk(
+  'products/createMany',
+  async (products, { rejectWithValue }) => {
+    try {
+      const { data } = await axiosInstance.post('/products/bulk', products)
+      return data
+    } catch (error) {
+      return rejectWithValue({
+        message: getApiError(error),
+        errors: error.response?.data?.errors || [],
+      })
+    }
+  },
+)
+
 export const updateProduct = createAsyncThunk(
   'products/update',
   async ({ productId, updates }, { rejectWithValue }) => {

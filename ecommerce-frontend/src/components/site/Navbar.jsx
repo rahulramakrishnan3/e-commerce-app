@@ -58,6 +58,11 @@ function Navbar() {
           <div className="hidden items-center gap-6 md:flex">
             {isAuthenticated ? (
               <>
+                {user.role === 'admin' && (
+                  <NavLink className={linkClass} to="/admin/products/bulk">
+                    Add products
+                  </NavLink>
+                )}
                 <NavLink className={linkClass} to="/orders">
                   {user.name}
                 </NavLink>
@@ -120,6 +125,15 @@ function Navbar() {
             ))}
             {isAuthenticated ? (
               <>
+                {user.role === 'admin' && (
+                  <NavLink
+                    className="rounded px-3 py-3 text-sm text-[#625f57]"
+                    onClick={() => setMenuOpen(false)}
+                    to="/admin/products/bulk"
+                  >
+                    Add products
+                  </NavLink>
+                )}
                 <NavLink
                   className="rounded px-3 py-3 text-sm text-[#625f57]"
                   onClick={() => setMenuOpen(false)}

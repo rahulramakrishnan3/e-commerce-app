@@ -5,6 +5,7 @@ import { AUTH_SESSION_EXPIRED_EVENT } from './api/axiosInstance.js'
 import SiteLayout from './components/SiteLayout.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import RoutePlaceholder from './pages/RoutePlaceholder.jsx'
+import AdminBulkProducts from './pages/AdminBulkProducts.jsx'
 import Cart from './pages/Cart.jsx'
 import Checkout from './pages/Checkout.jsx'
 import Contact from './pages/Contact.jsx'
@@ -45,6 +46,9 @@ function App() {
           <Route path="checkout" element={<Checkout />} />
           <Route path="orders" element={<Orders />} />
           <Route path="orders/:orderId" element={<Orders />} />
+        </Route>
+        <Route element={<ProtectedRoute allowedRole="admin" />}>
+          <Route path="admin/products/bulk" element={<AdminBulkProducts />} />
         </Route>
         <Route
           path="about"

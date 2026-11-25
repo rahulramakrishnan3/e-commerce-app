@@ -2,6 +2,7 @@ import { createSlice } from '@reduxjs/toolkit'
 import { sessionCleared } from './authSlice.js'
 import {
   createProduct,
+  createProducts,
   deleteProduct,
   fetchProductById,
   fetchProducts,
@@ -88,6 +89,18 @@ const productSlice = createSlice({
         state.items.unshift(action.payload)
       })
       .addCase(createProduct.rejected, (state, action) => {
+        state.mutationStatus = 'failed'
+        state.error = action.payload || action.error.message
+      })
+      .addCase(createProducts.pending, (state) => {
+        state.mutationStatus = 'loading'
+        state.error = null
+      })
+      .addCase(createProducts.fulfilled, (state, action) => {
+        state.mutationStatus = 'succeeded'
+        state.items = [...action.payload.products, ...state.items]
+      })
+      .addCase(createProducts.rejected, (state, action) => {
         state.mutationStatus = 'failed'
         state.error = action.payload || action.error.message
       })

@@ -14,6 +14,7 @@ const productFields = [
   "images",
   "isFeatured",
 ];
+const MAX_BULK_PRODUCTS = 100;
 
 const pickProductFields = (body) => {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -173,6 +174,77 @@ const createProduct = async (req, res, next) => {
   }
 };
 
+const createProducts = async (req, res, next) => {
+  try {
+    if (
+      !Array.isArray(req.body) ||
+      req.body.length === 0 ||
+      req.body.length > MAX_BULK_PRODUCTS
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Provide an array containing between 1 and ${MAX_BULK_PRODUCTS} products`,
+      });
+    }
+
+    const productsToCreate = [];
+    const errors = [];
+
+    for (const [index, productData] of req.body.entries()) {
+      const cleanProduct = pickProductFields(productData);
+      if (!cleanProduct || Object.keys(cleanProduct).length === 0) {
+        errors.push({
+          index,
+          message: "Provide a product object with supported fields only",
+        });
+        continue;
+      }
+
+      const product = new Product(cleanProduct);
+      try {
+        await product.validate();
+        productsToCreate.push(cleanProduct);
+      } catch (error) {
+        if (error.name !== "ValidationError") {
+          throw error;
+        }
+
+        errors.push({
+          index,
+          message: "Product validation failed",
+          fields: Object.fromEntries(
+            Object.entries(error.errors).map(([field, fieldError]) => [
+              field,
+              fieldError.message,
+            ]),
+          ),
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No products were created because the batch contains invalid products",
+        errors,
+      });
+    }
+
+    const products = await Product.insertMany(productsToCreate, {
+      ordered: true,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Products created successfully",
+      count: products.length,
+      products,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const updateProduct = async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
@@ -243,6 +315,7 @@ module.exports = {
   getProducts,
   getProductById,
   createProduct,
+  createProducts,
   updateProduct,
   deleteProduct,
 };

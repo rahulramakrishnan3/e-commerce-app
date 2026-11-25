@@ -59,6 +59,7 @@ The following describes the repository when this report was first prepared.
 - Frontend Tailwind setup, React Router, responsive shared layout, functional storefront pages, and Axios client are implemented.
 - Redux Toolkit auth, product, cart, and order state, API thunks, session restoration, and protected order routing are implemented.
 - Functional storefront, product detail, cart, COD checkout, order tracking/history, account forms, validated contact form, and signed-in recommendations are implemented.
+- Admins can add up to 100 products from a protected bulk-entry screen.
 
 ## 2.2. Confirmed Product Requirements
 
@@ -157,6 +158,7 @@ Cart changes are synchronous Redux actions because the backend does not expose a
 - [x] Build Contact form with browser validation.
 - [x] Build Login and registration forms with client/server error states.
 - [x] Integrate authenticated recommendation data.
+- [x] Add an admin-only product bulk-entry screen connected to the bulk API.
 
 Contact form validation is client-side only; this project has no message-delivery endpoint. Checkout currently supports cash on delivery only; online card payments are not connected.
 
@@ -299,6 +301,35 @@ Expect **201 Created**. Save the returned product ID in **Scripts → Post-respo
 pm.environment.set("productId", pm.response.json().product._id);
 ```
 
+#### Create multiple products in one request
+
+Create a **POST** request to `{{baseUrl}}/api/products/bulk` with **Authorization → Bearer Token** set to `{{adminToken}}`. Set **Body → raw → JSON** to a top-level array of product objects:
+
+```json
+[
+  {
+    "name": "Everyday Knit Sweater",
+    "description": "Soft cotton knit sweater",
+    "category": "Sweaters",
+    "price": 49.99,
+    "stock": 10,
+    "sizes": ["S", "M", "L"],
+    "colors": ["Oatmeal", "Navy"]
+  },
+  {
+    "name": "Wool Scarf",
+    "description": "A warm everyday scarf",
+    "category": "Accessories",
+    "price": 24.99,
+    "stock": 15,
+    "sizes": ["One size"],
+    "colors": ["Olive", "Charcoal"]
+  }
+]
+```
+
+Expect **201 Created**, with `count` and a `products` array in the response. The batch limit is 100 products. If any product has invalid fields or values, expect **400 Bad Request** with the invalid array indexes; validation happens before insertion, so no products in that invalid batch are created. Only an admin can use this endpoint.
+
 Now create these requests:
 
 | Method | URL | Authorization | Purpose |
@@ -391,6 +422,8 @@ Create a **GET** request to `{{baseUrl}}/api/analytics/recommendations?limit=8` 
 - Use Postman `GET {{baseUrl}}/api/orders` with the user token to verify the new order. Cancel a pending test order with the admin token to restore its reserved stock, as described in the order API test above.
 - Try mismatched registration passwords and incomplete/invalid contact fields; confirm the browser/client validation appears. Contact submission is a local validation demonstration and does not send an email or save a message.
 - Sign in to view the **Picked for you** section; it uses the authenticated recommendations endpoint and the backend's fallback when RapidMiner is unavailable.
+- Sign in as an admin and choose **Add products** in the Navbar. Add multiple product rows and submit; confirm the success count. A regular user visiting `/admin/products/bulk` should be redirected away.
+- Try an invalid product row in a multi-product batch; the indexed validation error should appear and the batch should not be created.
 - Check the pages at a mobile viewport (for example 375px wide), including the Navbar menu, product grid, cart, and checkout form.
 - `npm test`, `npm run lint`, and `npm run build` should all pass in `ecommerce-frontend`.
 

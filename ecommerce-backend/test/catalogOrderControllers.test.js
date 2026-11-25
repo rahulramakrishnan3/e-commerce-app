@@ -6,15 +6,20 @@ const Product = require("../models/product");
 const {
   placeOrder,
 } = require("../controllers/orderController");
-const { getProducts } = require("../controllers/productController");
+const {
+  createProducts,
+  getProducts,
+} = require("../controllers/productController");
 
 const originalProductFindById = Product.findById;
 const originalProductFindOneAndUpdate = Product.findOneAndUpdate;
+const originalProductInsertMany = Product.insertMany;
 const originalOrderCreate = Order.create;
 
 afterEach(() => {
   Product.findById = originalProductFindById;
   Product.findOneAndUpdate = originalProductFindOneAndUpdate;
+  Product.insertMany = originalProductInsertMany;
   Order.create = originalOrderCreate;
 });
 
@@ -31,6 +36,14 @@ const createResponse = () => ({
   },
 });
 
+const validProductData = (name = "Knit Sweater") => ({
+  name,
+  description: "Soft cotton knit sweater",
+  category: "Sweaters",
+  price: 49.99,
+  stock: 10,
+});
+
 test("product listing rejects unsupported sort fields", async () => {
   const res = createResponse();
 
@@ -44,6 +57,80 @@ test("product listing rejects unsupported sort fields", async () => {
 
   assert.equal(res.statusCode, 400);
   assert.match(res.body.message, /sort field/i);
+});
+
+test("bulk product creation inserts all validated products", async () => {
+  let insertedProducts;
+  Product.insertMany = async (products, options) => {
+    insertedProducts = products;
+    assert.deepEqual(options, { ordered: true });
+    return products.map((product) => ({
+      ...product,
+      _id: new mongoose.Types.ObjectId(),
+    }));
+  };
+
+  const res = createResponse();
+  await createProducts(
+    { body: [validProductData("Knit Sweater"), validProductData("Wool Scarf")] },
+    res,
+    (error) => {
+      throw error;
+    },
+  );
+
+  assert.equal(res.statusCode, 201);
+  assert.equal(insertedProducts.length, 2);
+  assert.equal(res.body.count, 2);
+  assert.equal(res.body.products.length, 2);
+});
+
+test("bulk product creation rejects the entire batch before insertion if one item is invalid", async () => {
+  let insertManyCalled = false;
+  Product.insertMany = async () => {
+    insertManyCalled = true;
+    return [];
+  };
+
+  const res = createResponse();
+  await createProducts(
+    {
+      body: [
+        validProductData("Valid Product"),
+        { name: "Invalid Product", price: -1 },
+      ],
+    },
+    res,
+    (error) => {
+      throw error;
+    },
+  );
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(insertManyCalled, false);
+  assert.equal(res.body.errors[0].index, 1);
+  assert.equal(res.body.errors[0].message, "Product validation failed");
+});
+
+test("bulk product creation enforces the 100-product request limit", async () => {
+  let insertManyCalled = false;
+  Product.insertMany = async () => {
+    insertManyCalled = true;
+    return [];
+  };
+
+  const res = createResponse();
+  await createProducts(
+    { body: Array.from({ length: 101 }, () => validProductData()) },
+    res,
+    (error) => {
+      throw error;
+    },
+  );
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(insertManyCalled, false);
+  assert.match(res.body.message, /between 1 and 100/i);
 });
 
 test("order uses database prices and reserves requested stock", async () => {
