@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-11-25  
 **Source requirement:** `prompt.md`  
-**Status:** Steps 1-7 implemented; Step 8 is awaiting approval.
+**Status:** Steps 1-8 implemented; Step 9 is awaiting approval.
 
 ## 1. Requirements Summary
 
@@ -56,8 +56,9 @@ The following describes the repository when this report was first prepared.
 - JWT authentication, profile routes, and role-based access control are implemented.
 - Product CRUD/search/filter/sort and order placement/tracking/status APIs are implemented.
 - Authenticated recommendations use RapidMiner when configured and catalog-based suggestions as a fallback.
-- Frontend Tailwind setup, React Router shell, responsive shared layout, route placeholders, and Axios client are implemented.
+- Frontend Tailwind setup, React Router, responsive shared layout, functional storefront pages, and Axios client are implemented.
 - Redux Toolkit auth, product, cart, and order state, API thunks, session restoration, and protected order routing are implemented.
+- Functional storefront, product detail, cart, COD checkout, order tracking/history, account forms, validated contact form, and signed-in recommendations are implemented.
 
 ## 2.2. Confirmed Product Requirements
 
@@ -118,7 +119,7 @@ Implementation will proceed one phase at a time. The next phase will not begin w
 - [x] Restrict administrative operations through RBAC.
 
 **Step 4 status:** Complete.
-**Step 5 status:** Awaiting approval.
+
 ### Step 5 - Recommendations
 
 - [x] Add a RapidMiner recommendation route and controller.
@@ -146,20 +147,22 @@ Implementation will proceed one phase at a time. The next phase will not begin w
 Cart changes are synchronous Redux actions because the backend does not expose a cart API.
 
 **Step 7 status:** Complete. Frontend tests, lint, and build passed; unauthenticated order-page access redirects to sign-in.
-**Step 8 status:** Awaiting approval.
-**Approval required before Step 8:** Yes
 
 ### Step 8 - Application pages and integration
 
-- [ ] Build Home and product listing.
-- [ ] Build Product Detail.
-- [ ] Build Cart and order placement.
-- [ ] Build Orders and tracking.
-- [ ] Build Contact form with validation.
-- [ ] Build Login and registration UI.
-- [ ] Integrate recommendation data.
+- [x] Build Home and searchable/filterable product listing with pagination.
+- [x] Build Product Detail with size/color selection and stock-aware add-to-bag.
+- [x] Build Cart and protected cash-on-delivery checkout.
+- [x] Build order history and tracking views.
+- [x] Build Contact form with browser validation.
+- [x] Build Login and registration forms with client/server error states.
+- [x] Integrate authenticated recommendation data.
 
-**Approval required before Step 8:** Yes
+Contact form validation is client-side only; this project has no message-delivery endpoint. Checkout currently supports cash on delivery only; online card payments are not connected.
+
+**Step 8 status:** Complete. Frontend tests, lint, and build passed. Browser checks covered product browsing, product detail, cart, registration validation, contact validation, price-range validation, mobile layout, and protected checkout redirect.
+**Step 9 status:** Awaiting approval.
+**Approval required before Step 9:** Yes
 
 ### Step 9 - Quality and responsiveness
 
@@ -366,32 +369,40 @@ Create a **GET** request to `{{baseUrl}}/api/analytics/recommendations?limit=8` 
 
 - Create `ecommerce-frontend/.env` from `.env.example` and set `VITE_API_URL` to the backend API base URL.
 - Start the frontend from a terminal in `ecommerce-frontend` with `npm run dev`, then open the displayed local URL in a browser.
-- Confirm Tailwind styling and branding render, the Navbar/Footer appear, and the Shop, Our story, Contact, Cart, Orders, and Login links navigate to their placeholder pages.
+- Confirm Tailwind styling and branding render, the Navbar/Footer appear, and the Shop, Our story, Contact, Cart, Orders, and Login links navigate to their pages.
 - At a narrow mobile viewport, open the menu and verify its links are visible and usable.
-- The route pages are foundation placeholders; page functionality and API integration are planned for Step 8.
+- `npm run build` and `npm run lint` both pass for the frontend.
 
 ### Step 7 - Redux, authentication, and protected route checks
 
-- Run `npm test` in `ecommerce-frontend` to verify cart variant lines, quantity updates, removals, and totals.
+- Run `npm test` in `ecommerce-frontend` to verify cart variant lines, stock limits, quantity updates, removals, and totals.
 - Run `npm run lint` and `npm run build` in `ecommerce-frontend`.
 - In a browser, open `http://localhost:5173/orders` with no token; it should redirect to `http://localhost:5173/login`.
 - To check session restoration, obtain a valid token with the Postman login request, then add a browser Local Storage entry named `knit-and-thread-token` for the frontend origin and set its value to that token.
-- Reload `/orders`; the app should validate the token using `GET /api/profile/me`, display the signed-in user in the Navbar, and allow the protected placeholder page to load.
+- Reload `/orders`; the app should validate the token using `GET /api/profile/me`, display the signed-in user in the Navbar, and show the order history.
 - Select **Sign out** in the Navbar; confirm the token is removed and visiting `/orders` redirects to `/login`.
-- Full login/register form interaction is planned for Step 8.
 
-### Steps 8-10 - Application and deployment checks
+### Step 8 - Application and integration checks
 
-These are browser checks rather than Postman API requests:
+- In the browser, open `/shop`, search for a catalog item, try category and price filters, change sort order, and page through results when more than 12 products exist.
+- Open a product, select an available size/color, add it to the bag, and verify its variant, quantity, subtotal, and stock limit on `/cart`.
+- With no active session, use **Sign in to checkout**; after signing in, checkout should return to the protected checkout page.
+- In checkout, enter a valid shipping address, select **Cash on delivery**, place the order, then confirm its status and address in order tracking and `/orders`.
+- Use Postman `GET {{baseUrl}}/api/orders` with the user token to verify the new order. Cancel a pending test order with the admin token to restore its reserved stock, as described in the order API test above.
+- Try mismatched registration passwords and incomplete/invalid contact fields; confirm the browser/client validation appears. Contact submission is a local validation demonstration and does not send an email or save a message.
+- Sign in to view the **Picked for you** section; it uses the authenticated recommendations endpoint and the backend's fallback when RapidMiner is unavailable.
+- Check the pages at a mobile viewport (for example 375px wide), including the Navbar menu, product grid, cart, and checkout form.
+- `npm test`, `npm run lint`, and `npm run build` should all pass in `ecommerce-frontend`.
 
-- Test login/logout, protected pages, cart updates, checkout, order history, form validation, and error/loading states.
+### Steps 9-10 - Quality and deployment checks
+
+- Test API error/loading states and edge cases, including expired sessions and out-of-stock checkout.
 - Test responsive layouts and direct navigation to each route.
-- Run the frontend build and lint checks.
 - After deployment, repeat the Postman API requests using the deployed backend URL and test the deployed site in a browser.
 - Record frontend and backend deployment URLs in this README.
 
 ## 7. Approval Gate
 
-Steps 1 through 7 are complete. Implementation is paused before Step 8.
+Steps 1 through 8 are complete. Implementation is paused before Step 9.
 
-Please approve **Step 8** to begin the application pages and integration.
+Please approve **Step 9** to begin the quality and responsiveness phase.

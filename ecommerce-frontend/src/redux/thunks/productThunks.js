@@ -14,6 +14,21 @@ export const fetchProducts = createAsyncThunk(
   },
 )
 
+export const fetchRecommendations = createAsyncThunk(
+  'products/fetchRecommendations',
+  async (_, { rejectWithValue }) => {
+    try {
+      const { data } = await axiosInstance.get('/analytics/recommendations')
+      return {
+        products: data.recommendations,
+        source: data.source,
+      }
+    } catch (error) {
+      return rejectWithValue(getApiError(error))
+    }
+  },
+)
+
 export const fetchProductById = createAsyncThunk(
   'products/fetchById',
   async (productId, { rejectWithValue }) => {

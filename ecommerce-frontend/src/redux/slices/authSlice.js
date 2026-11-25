@@ -21,6 +21,9 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
+    clearAuthError(state) {
+      state.error = null
+    },
     sessionCleared(state) {
       state.user = null
       state.token = null
@@ -80,7 +83,7 @@ const authSlice = createSlice({
   },
 })
 
-export const { sessionCleared } = authSlice.actions
+export const { clearAuthError, sessionCleared } = authSlice.actions
 export const logoutUser = () => (dispatch) => {
   window.localStorage.removeItem(AUTH_TOKEN_KEY)
   dispatch(sessionCleared())

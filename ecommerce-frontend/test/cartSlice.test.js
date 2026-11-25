@@ -52,3 +52,33 @@ test('cart ignores invalid quantities and removes a selected line', () => {
   state = cartReducer(state, removeItem(item.lineId))
   assert.equal(state.items.length, 0)
 })
+
+test('cart quantity stays within stock across product variants', () => {
+  const product = {
+    _id: 'product-stock',
+    price: 10,
+    name: 'Knit Cardigan',
+    stock: 3,
+  }
+  let state = cartReducer(
+    undefined,
+    addItem({ product, quantity: 2, size: 'S', color: 'Oatmeal' }),
+  )
+  state = cartReducer(
+    state,
+    addItem({ product, quantity: 2, size: 'M', color: 'Navy' }),
+  )
+  state = cartReducer(
+    state,
+    addItem({ product, quantity: 1, size: 'L', color: 'Navy' }),
+  )
+
+  assert.equal(selectCartItemCount({ cart: state }), 3)
+  assert.equal(state.items.length, 2)
+
+  state = cartReducer(
+    state,
+    setItemQuantity({ lineId: state.items[0].lineId, quantity: 3 }),
+  )
+  assert.equal(selectCartItemCount({ cart: state }), 3)
+})

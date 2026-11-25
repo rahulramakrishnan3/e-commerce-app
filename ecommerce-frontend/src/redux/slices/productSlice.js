@@ -1,17 +1,23 @@
 import { createSlice } from '@reduxjs/toolkit'
+import { sessionCleared } from './authSlice.js'
 import {
   createProduct,
   deleteProduct,
   fetchProductById,
   fetchProducts,
+  fetchRecommendations,
   updateProduct,
 } from '../thunks/productThunks.js'
 
 const initialState = {
   items: [],
+  recommendations: [],
+  recommendationSource: null,
   selectedProduct: null,
   pagination: null,
   listStatus: 'idle',
+  recommendationsStatus: 'idle',
+  recommendationsError: null,
   detailStatus: 'idle',
   mutationStatus: 'idle',
   error: null,
@@ -40,6 +46,25 @@ const productSlice = createSlice({
       .addCase(fetchProducts.rejected, (state, action) => {
         state.listStatus = 'failed'
         state.error = action.payload || action.error.message
+      })
+      .addCase(fetchRecommendations.pending, (state) => {
+        state.recommendationsStatus = 'loading'
+        state.recommendationsError = null
+      })
+      .addCase(fetchRecommendations.fulfilled, (state, action) => {
+        state.recommendationsStatus = 'succeeded'
+        state.recommendations = action.payload.products
+        state.recommendationSource = action.payload.source
+      })
+      .addCase(fetchRecommendations.rejected, (state, action) => {
+        state.recommendationsStatus = 'failed'
+        state.recommendationsError = action.payload || action.error.message
+      })
+      .addCase(sessionCleared, (state) => {
+        state.recommendations = []
+        state.recommendationSource = null
+        state.recommendationsStatus = 'idle'
+        state.recommendationsError = null
       })
       .addCase(fetchProductById.pending, (state) => {
         state.detailStatus = 'loading'

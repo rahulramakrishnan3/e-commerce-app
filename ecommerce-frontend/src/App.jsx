@@ -1,89 +1,51 @@
 import { useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import { Route, Routes } from 'react-router-dom'
+import { AUTH_SESSION_EXPIRED_EVENT } from './api/axiosInstance.js'
 import SiteLayout from './components/SiteLayout.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import RoutePlaceholder from './pages/RoutePlaceholder.jsx'
+import Cart from './pages/Cart.jsx'
+import Checkout from './pages/Checkout.jsx'
+import Contact from './pages/Contact.jsx'
+import Home from './pages/Home.jsx'
+import Login from './pages/Login.jsx'
+import Orders from './pages/Orders.jsx'
+import ProductDetail from './pages/ProductDetail.jsx'
+import Register from './pages/Register.jsx'
+import Shop from './pages/Shop.jsx'
+import { sessionCleared } from './redux/slices/authSlice.js'
 import { loadCurrentUser } from './redux/thunks/authThunks.js'
 
 function App() {
   const dispatch = useDispatch()
 
   useEffect(() => {
+    const handleExpiredSession = () => dispatch(sessionCleared())
+    window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, handleExpiredSession)
     dispatch(loadCurrentUser())
+    return () =>
+      window.removeEventListener(
+        AUTH_SESSION_EXPIRED_EVENT,
+        handleExpiredSession,
+      )
   }, [dispatch])
 
   return (
     <Routes>
       <Route element={<SiteLayout />}>
-        <Route
-          index
-          element={
-            <RoutePlaceholder
-              eyebrow="Knit and Thread"
-              title="Everyday warmth, thoughtfully knit."
-              description="A considered collection of soft layers and timeless essentials is coming together."
-              linkTo="/shop"
-              linkLabel="Explore the collection"
-            />
-          }
-        />
-        <Route
-          path="shop"
-          element={
-            <RoutePlaceholder
-              eyebrow="The collection"
-              title="Made for the moments in between."
-              description="Our clothing collection is being prepared. Check back soon to explore the pieces."
-            />
-          }
-        />
-        <Route
-          path="products/:productId"
-          element={
-            <RoutePlaceholder
-              eyebrow="Product"
-              title="A closer look."
-              description="Product details will appear here once the catalog is connected."
-              linkTo="/shop"
-              linkLabel="Back to the collection"
-            />
-          }
-        />
-        <Route
-          path="cart"
-          element={
-            <RoutePlaceholder
-              eyebrow="Your selection"
-              title="Your bag is ready for something special."
-              description="Your selected pieces will appear here."
-              linkTo="/shop"
-              linkLabel="Continue shopping"
-            />
-          }
-        />
+        <Route index element={<Home />} />
+        <Route path="shop" element={<Shop />} />
+        <Route path="products/:productId" element={<ProductDetail />} />
+        <Route path="cart" element={<Cart />} />
+        <Route path="contact" element={<Contact />} />
+        <Route path="login" element={<Login />} />
+        <Route path="register" element={<Register />} />
         <Route element={<ProtectedRoute />}>
-          <Route
-            path="orders"
-            element={
-              <RoutePlaceholder
-                eyebrow="Your account"
-                title="Order history"
-                description="Your order history will appear here."
-              />
-            }
-          />
+          <Route path="checkout" element={<Checkout />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="orders/:orderId" element={<Orders />} />
         </Route>
-        <Route
-          path="contact"
-          element={
-            <RoutePlaceholder
-              eyebrow="We are here to help"
-              title="Get in touch."
-              description="Our contact page is coming soon."
-            />
-          }
-        />
         <Route
           path="about"
           element={
@@ -91,26 +53,6 @@ function App() {
               eyebrow="Our story"
               title="Good things take time."
               description="We are bringing the Knit and Thread story together."
-            />
-          }
-        />
-        <Route
-          path="login"
-          element={
-            <RoutePlaceholder
-              eyebrow="Welcome back"
-              title="Sign in"
-              description="Customer sign-in is coming soon."
-            />
-          }
-        />
-        <Route
-          path="register"
-          element={
-            <RoutePlaceholder
-              eyebrow="Join the community"
-              title="Create an account"
-              description="Account registration is coming soon."
             />
           }
         />

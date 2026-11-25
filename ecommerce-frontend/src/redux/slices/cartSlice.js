@@ -13,19 +13,52 @@ const cartSlice = createSlice({
         return
       }
 
+      const currentProductQuantity = state.items
+        .filter((item) => item.productId === productId)
+        .reduce((total, item) => total + item.quantity, 0)
+      const remainingStock =
+        typeof product.stock === 'number' && Number.isFinite(product.stock)
+          ? Math.max(0, product.stock - currentProductQuantity)
+          : quantity
+      const acceptedQuantity = Math.min(quantity, remainingStock)
+      if (acceptedQuantity < 1) {
+        return
+      }
+
       const lineId = `${productId}:${size}:${color}`
       const existing = state.items.find((item) => item.lineId === lineId)
       if (existing) {
-        existing.quantity += quantity
+        existing.quantity += acceptedQuantity
       } else {
-        state.items.push({ lineId, productId, product, quantity, size, color })
+        state.items.push({
+          lineId,
+          productId,
+          product,
+          quantity: acceptedQuantity,
+          size,
+          color,
+        })
       }
     },
     setItemQuantity(state, action) {
       const { lineId, quantity } = action.payload
       const item = state.items.find((cartItem) => cartItem.lineId === lineId)
       if (item && Number.isInteger(quantity) && quantity > 0) {
-        item.quantity = quantity
+        const otherProductQuantity = state.items
+          .filter(
+            (cartItem) =>
+              cartItem.productId === item.productId &&
+              cartItem.lineId !== item.lineId,
+          )
+          .reduce((total, cartItem) => total + cartItem.quantity, 0)
+        const remainingStock =
+          typeof item.product.stock === 'number' &&
+          Number.isFinite(item.product.stock)
+            ? item.product.stock - otherProductQuantity
+            : quantity
+        if (remainingStock > 0) {
+          item.quantity = Math.min(quantity, remainingStock)
+        }
       }
     },
     removeItem(state, action) {
