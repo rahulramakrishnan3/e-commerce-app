@@ -3,6 +3,7 @@ require("dotenv").config();
 const cors = require("cors");
 const express = require("express");
 
+const analyticsRoutes = require("./routes/analyticsRoutes");
 const dbConnection = require("./config/dbConnection");
 const { errorHandler, notFound } = require("./middleware/errorHandler");
 const authenticationRoutes = require("./routes/authenticationRoutes");
@@ -31,6 +32,7 @@ app.use("/api/auth", authenticationRoutes);
 app.use("/api/profile", userProfileRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

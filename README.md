@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-11-25  
 **Source requirement:** `prompt.md`  
-**Status:** Steps 1-4 implemented; Step 5 is awaiting approval.
+**Status:** Steps 1-5 implemented; Step 6 is awaiting approval.
 
 ## 1. Requirements Summary
 
@@ -55,6 +55,7 @@ The following describes the repository when this report was first prepared.
 - User, product, and order Mongoose models are implemented.
 - JWT authentication, profile routes, and role-based access control are implemented.
 - Product CRUD/search/filter/sort and order placement/tracking/status APIs are implemented.
+- Authenticated recommendations use RapidMiner when configured and catalog-based suggestions as a fallback.
 - Frontend work has not started.
 
 ## 2.2. Confirmed Product Requirements
@@ -117,15 +118,15 @@ Implementation will proceed one phase at a time. The next phase will not begin w
 
 **Step 4 status:** Complete.
 **Step 5 status:** Awaiting approval.
-**Approval required before Step 5:** Yes
-
 ### Step 5 - Recommendations
 
-- [ ] Add a RapidMiner recommendation route and controller.
-- [ ] Support environment-configured API credentials/URL.
-- [ ] Add a safe fallback when recommendation service data is unavailable.
+- [x] Add a RapidMiner recommendation route and controller.
+- [x] Support environment-configured API credentials/URL.
+- [x] Add a safe fallback when recommendation service data is unavailable.
 
-**Approval required before Step 5:** Yes
+**Step 5 status:** Complete.
+**Step 6 status:** Awaiting approval.
+**Approval required before Step 6:** Yes
 
 ### Step 6 - Frontend foundation
 
@@ -341,11 +342,14 @@ Also verify that another regular user cannot retrieve the order (HTTP 403), regu
 
 ### Step 5 - Recommendations
 
-- Test the recommendation endpoint with a valid user or product identifier.
-- Confirm HTTP 200 with the expected recommended-product array.
-- Test RapidMiner URL/credential misconfiguration and confirm a safe fallback response.
-- Test a request where no recommendations are available.
-- Confirm recommendation failures do not crash the server.
+- Run `npm test`; recommendation tests cover catalog fallback, RapidMiner product-ID resolution, and fallback when the external service returns no available products.
+- Sign in as a regular user and call `GET /api/analytics/recommendations?limit=8` with a Bearer token.
+- With no RapidMiner URL configured, expect HTTP 200 and `"source": "fallback"`.
+- To connect RapidMiner, set `RAPIDMINER_RECOMMENDATION_URL` in the backend `.env`; optionally set `RAPIDMINER_API_KEY`.
+- The configured service receives a `POST` JSON body `{ "userId": "<signed-in-user-id>", "limit": 8 }`; when a key is set it is sent as a Bearer token.
+- The service should return `{ "recommendations": [{ "productId": "<MongoDB-product-id>" }] }` or an array of product IDs. Only matching in-stock catalog products are returned.
+- Simulate an unavailable service or an empty/out-of-stock result; expect an HTTP 200 catalog fallback instead of a failed request.
+- Confirm missing/invalid authentication returns HTTP 401 and an invalid `limit` returns HTTP 400.
 
 ### Step 6 - Frontend foundation
 
@@ -395,6 +399,6 @@ Also verify that another regular user cannot retrieve the order (HTTP 403), regu
 
 ## 7. Approval Gate
 
-Steps 1 through 4 are complete. Implementation is paused before Step 5.
+Steps 1 through 5 are complete. Implementation is paused before Step 6.
 
-Please approve **Step 5** to begin the RapidMiner recommendation integration.
+Please approve **Step 6** to begin the frontend foundation.
