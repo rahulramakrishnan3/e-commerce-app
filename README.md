@@ -86,12 +86,14 @@ Implementation will proceed one phase at a time. The next phase will not begin w
 
 ### Step 2 - Backend data models
 
-- [ ] Create user model with hashed password and role support.
-- [ ] Create product model.
-- [ ] Create order model with status and item details.
-- [ ] Establish required schema relationships.
+- [x] Create user model with hashed password and role support.
+- [x] Create product model.
+- [x] Create order model with status and item details.
+- [x] Establish required schema relationships.
 
-**Approval required before Step 2:** Yes
+**Step 2 status:** Complete.
+**Step 3 status:** Awaiting approval.
+**Approval required before Step 3:** Yes
 
 ### Step 3 - Authentication and authorization
 
