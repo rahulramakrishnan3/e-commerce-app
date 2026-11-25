@@ -187,215 +187,187 @@ Implementation will proceed one phase at a time. The next phase will not begin w
 
 ## 6. Testing Guide
 
-Run each phase's tests only after that phase is complete. Keep the backend and frontend servers running in separate terminals.
+All backend API examples below are designed for **Postman**. Keep MongoDB running and the backend server started before sending requests. Create `.env` from `.env.example`, then configure `MONGO_URI`, a private `JWT_SECRET`, and `CLIENT_URL`. Do not share or commit `.env`. From a terminal in `ecommerce-backend`, start the server with `npm start`.
 
-### Test setup
+### Postman setup
 
-1. Open a terminal in `ecommerce-backend`.
-2. Copy `.env.example` to `.env`.
-3. Set `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, and `CLIENT_URL`.
-4. Install dependencies with `npm install` if needed.
-5. Start MongoDB locally or provide a valid MongoDB Atlas connection.
-6. Run `npm start` for the backend.
-7. Open `http://localhost:5000/api/status` to verify the API process.
+1. Create a Postman environment named **Knit and Thread - Local**.
+2. Add these environment variables:
 
-PowerShell syntax check:
+   | Variable | Initial value |
+   |---|---|
+   | `baseUrl` | `http://localhost:5000` |
+   | `userToken` | *(leave empty)* |
+   | `adminToken` | *(leave empty)* |
+   | `productId` | *(leave empty)* |
+   | `orderId` | *(leave empty)* |
 
-```powershell
-node --check index.js
-node --check models/user.js
-node --check models/product.js
-node --check models/order.js
-```
+3. Select this environment in Postman.
+4. Create a collection named **Knit and Thread API**. For authenticated requests, select **Authorization → Bearer Token** and enter `{{userToken}}` or `{{adminToken}}`.
+5. To save values returned from requests, open **Scripts → Post-response** for that request and add the small Postman script shown below.
 
-Run the backend unit tests:
+The backend tests can be run separately from a terminal in `ecommerce-backend` with `npm test`. Tests currently cover authentication error handling, product sorting validation, order pricing/inventory, and recommendation fallback.
 
-```powershell
-npm test
-```
+### Step 1 - API and configuration check
 
-### Step 1 - Project baseline and configuration
+Create a **GET** request to `{{baseUrl}}/api/status`. Expect **200 OK** and an app name of `Knit and Thread`.
 
-- Run `npm start` and confirm the server listens on port 5000.
-- Confirm MongoDB connects or record the missing-configuration warning.
-- Test `GET /api/status` and expect HTTP 200 with the Knit and Thread app name.
-- Test an unknown route and expect HTTP 404 JSON.
-- Confirm `.env` is excluded by Git and `.env.example` is available.
+Try a **GET** request to `{{baseUrl}}/api/does-not-exist`. Expect **404 Not Found** with a JSON error.
 
-### Step 2 - Backend data models
+### Step 2 - Database models
 
-- Run syntax checks for all files in `models/`.
-- Confirm the backend can connect to MongoDB.
-- Register a temporary user to validate password hashing.
-- Confirm the users, products, and orders collections can be created in MongoDB.
-- Confirm invalid required fields and out-of-range values are rejected by Mongoose validation.
+The models are exercised through the registration, product, and order requests below. Check that invalid required values are rejected, and that the `users`, `products`, and `orders` collections appear in MongoDB after the corresponding requests.
 
-### Step 3 - Authentication and authorization
+### Step 3 - Register, log in, and verify profile access
 
-- Send `POST /api/auth/register` with valid name, email, and password.
-- Confirm HTTP 201 and a JWT token are returned.
-- Send the same registration again and confirm HTTP 409.
-- Send `POST /api/auth/login` with valid credentials and confirm HTTP 200.
-- Send login with an incorrect password and confirm HTTP 401.
-- Send `GET /api/profile/me` without a token and confirm HTTP 401.
-- Send `GET /api/profile/me` with a valid token and confirm the current user data.
-- Update `PUT /api/profile/me` with a supported name change and confirm HTTP 200.
-- Test an admin-only route with a user token and confirm HTTP 403.
-- Test an admin-only route with an admin token and confirm access.
-- Confirm password values are never returned from profile responses.
+Create a **POST** request to `{{baseUrl}}/api/auth/register`. Under **Body → raw → JSON**, enter:
 
-Example registration request:
-
-```powershell
-$body = @{
-  name = "Test Customer"
-  email = "customer@example.com"
-  password = "Password123!"
-} | ConvertTo-Json
-
-Invoke-RestMethod -Method Post -Uri "http://localhost:5000/api/auth/register" -ContentType "application/json" -Body $body
-```
-
-Example authenticated profile request:
-
-```powershell
-$token = "<JWT_TOKEN>"
-Invoke-RestMethod -Uri "http://localhost:5000/api/profile/me" -Headers @{
-  Authorization = "Bearer $token"
+```json
+{
+  "name": "Test Customer",
+  "email": "customer@example.com",
+  "password": "Password123!"
 }
 ```
 
-### Step 4 - Product and order APIs
+Expect **201 Created** and a token. In **Scripts → Post-response**, save it:
 
-Run `npm test`; the controller tests cover unsupported product sorting, server-authoritative order pricing, inventory reservation, and invalid order items. For end-to-end testing, use a running MongoDB instance and the manual API checks below.
-
-First promote a local test account to admin in MongoDB (for example, edit its `role` field to `admin` in MongoDB Compass), then log in again and use the fresh token. Public registration intentionally does not allow assigning an admin role.
-
-Create a product as admin:
-
-```powershell
-$adminHeaders = @{ Authorization = "Bearer <ADMIN_JWT>" }
-$productBody = @{
-  name = "Everyday Knit Sweater"
-  description = "Soft cotton knit sweater"
-  category = "Sweaters"
-  price = 49.99
-  stock = 10
-  sizes = @("S", "M", "L")
-  colors = @("Oatmeal", "Navy")
-} | ConvertTo-Json
-
-$created = Invoke-RestMethod -Method Post `
-  -Uri "http://localhost:5000/api/products" `
-  -Headers $adminHeaders -ContentType "application/json" -Body $productBody
-$productId = $created.product._id
+```javascript
+pm.environment.set("userToken", pm.response.json().token);
 ```
 
-Test product listing and filtering:
+Create a **POST** request to `{{baseUrl}}/api/auth/login` with the same email and password. Expect **200 OK**. If the registration script saved the token, this login script will refresh it:
 
-```powershell
-Invoke-RestMethod "http://localhost:5000/api/products?search=knit&category=Sweaters&minPrice=20&sort=price&order=asc&page=1&limit=10"
-Invoke-RestMethod "http://localhost:5000/api/products/$productId"
+```javascript
+pm.environment.set("userToken", pm.response.json().token);
 ```
 
-Product creation, update, and deletion require an admin token. Try creating a product with a regular user token and expect HTTP 403. Invalid sort fields, price ranges, pagination, and product IDs should return a 400 response.
+Test the following requests:
 
-Place an order as an authenticated user:
+| Method | URL | Authorization | Expected |
+|---|---|---|---|
+| POST | `{{baseUrl}}/api/auth/register` (same email again) | No Auth | `409 Conflict` |
+| POST | `{{baseUrl}}/api/auth/login` (wrong password) | No Auth | `401 Unauthorized` |
+| GET | `{{baseUrl}}/api/profile/me` | No Auth | `401 Unauthorized` |
+| GET | `{{baseUrl}}/api/profile/me` | Bearer `{{userToken}}` | `200 OK`, profile contains no password |
+| PUT | `{{baseUrl}}/api/profile/me` | Bearer `{{userToken}}` | `200 OK` |
+| GET | `{{baseUrl}}/api/profile` | Bearer `{{adminToken}}` | Admin user list |
 
-```powershell
-$userHeaders = @{ Authorization = "Bearer <USER_JWT>" }
-$orderBody = @{
-  items = @(@{ product = $productId; quantity = 1; size = "M"; color = "Navy" })
-  shippingAddress = @{
-    fullName = "Test Customer"
-    addressLine1 = "10 Example Street"
-    city = "Toronto"
-    state = "Ontario"
-    postalCode = "A1A 1A1"
-    country = "Canada"
-    phone = "555-0100"
-  }
-  paymentMethod = "cash_on_delivery"
-} | ConvertTo-Json -Depth 5
+For the profile update, use **Body → raw → JSON**:
 
-$placed = Invoke-RestMethod -Method Post `
-  -Uri "http://localhost:5000/api/orders" `
-  -Headers $userHeaders -ContentType "application/json" -Body $orderBody
-$orderId = $placed.order._id
+```json
+{
+  "name": "Updated Customer"
+}
 ```
 
-Confirm the order total is calculated from the database product price and stock decreases by the ordered quantity. Shipping is currently free (`shippingCost` is zero); no payment processor is connected.
+### Step 4 - Products and orders
 
-Test order retrieval and administration:
+#### Prepare an admin account
 
-```powershell
-Invoke-RestMethod "http://localhost:5000/api/orders" -Headers $userHeaders
-Invoke-RestMethod "http://localhost:5000/api/orders/$orderId" -Headers $userHeaders
+Public registration creates regular users only. Register a second test user, then in MongoDB Compass open the `users` collection, find that account, and change its `role` to `admin`. Log in with that account in Postman and save its token as `adminToken` using the post-response script:
 
-$statusBody = @{ status = "confirmed" } | ConvertTo-Json
-Invoke-RestMethod -Method Patch `
-  -Uri "http://localhost:5000/api/orders/$orderId/status" `
-  -Headers $adminHeaders -ContentType "application/json" -Body $statusBody
+```javascript
+pm.environment.set("adminToken", pm.response.json().token);
 ```
 
-Also verify that another regular user cannot retrieve the order (HTTP 403), regular users cannot change its status (HTTP 403), invalid quantities/product IDs are rejected, and an admin cancellation restores the ordered stock.
+#### Create and browse a product
+
+Create a **POST** request to `{{baseUrl}}/api/products`. Set **Authorization → Bearer Token** to `{{adminToken}}`. Use this JSON body:
+
+```json
+{
+  "name": "Everyday Knit Sweater",
+  "description": "Soft cotton knit sweater",
+  "category": "Sweaters",
+  "price": 49.99,
+  "stock": 10,
+  "sizes": ["S", "M", "L"],
+  "colors": ["Oatmeal", "Navy"]
+}
+```
+
+Expect **201 Created**. Save the returned product ID in **Scripts → Post-response**:
+
+```javascript
+pm.environment.set("productId", pm.response.json().product._id);
+```
+
+Now create these requests:
+
+| Method | URL | Authorization | Purpose |
+|---|---|---|---|
+| GET | `{{baseUrl}}/api/products` | No Auth | List products |
+| GET | `{{baseUrl}}/api/products?search=knit&category=Sweaters&minPrice=20&sort=price&order=asc&page=1&limit=10` | No Auth | Search, filter, sort, paginate |
+| GET | `{{baseUrl}}/api/products/{{productId}}` | No Auth | Product detail |
+| PUT | `{{baseUrl}}/api/products/{{productId}}` | Bearer `{{adminToken}}` | Update a product |
+| DELETE | `{{baseUrl}}/api/products/{{productId}}` | Bearer `{{adminToken}}` | Delete a product after order tests |
+
+Try product creation with `{{userToken}}`; expect **403 Forbidden**. Invalid sort options, price ranges, pagination, and product IDs should return **400 Bad Request**.
+
+#### Place and track an order
+
+Record the product’s stock from its detail request. Create a **POST** request to `{{baseUrl}}/api/orders`, using **Authorization → Bearer Token** with `{{userToken}}`. Use this JSON body:
+
+```json
+{
+  "items": [
+    {
+      "product": "{{productId}}",
+      "quantity": 1,
+      "size": "M",
+      "color": "Navy"
+    }
+  ],
+  "shippingAddress": {
+    "fullName": "Test Customer",
+    "addressLine1": "10 Example Street",
+    "city": "Toronto",
+    "state": "Ontario",
+    "postalCode": "A1A 1A1",
+    "country": "Canada",
+    "phone": "555-0100"
+  },
+  "paymentMethod": "cash_on_delivery"
+}
+```
+
+Expect **201 Created**. Save the order ID:
+
+```javascript
+pm.environment.set("orderId", pm.response.json().order._id);
+```
+
+The order total should use the product’s saved price, and stock should decrease by one. Shipping currently costs zero; no payment processor is connected.
+
+| Method | URL | Authorization | Expected |
+|---|---|---|---|
+| GET | `{{baseUrl}}/api/orders` | Bearer `{{userToken}}` | User’s orders |
+| GET | `{{baseUrl}}/api/orders/{{orderId}}` | Bearer `{{userToken}}` | That user’s order |
+| PATCH | `{{baseUrl}}/api/orders/{{orderId}}/status` | Bearer `{{adminToken}}` | Admin updates status |
+
+For the **PATCH** body, select **Body → raw → JSON** and enter `{ "status": "cancelled" }` while the order is still pending. Confirm its stock is restored. Alternatively, test normal progression with `confirmed`, then `shipped`, then `delivered`. A regular user changing order status or accessing another user’s order should receive **403 Forbidden**.
 
 ### Step 5 - Recommendations
 
-- Run `npm test`; recommendation tests cover catalog fallback, RapidMiner product-ID resolution, and fallback when the external service returns no available products.
-- Sign in as a regular user and call `GET /api/analytics/recommendations?limit=8` with a Bearer token.
-- With no RapidMiner URL configured, expect HTTP 200 and `"source": "fallback"`.
+Create a **GET** request to `{{baseUrl}}/api/analytics/recommendations?limit=8` with **Authorization → Bearer Token** set to `{{userToken}}`.
+
+- Without a RapidMiner URL configured, expect **200 OK** and `"source": "fallback"`.
 - To connect RapidMiner, set `RAPIDMINER_RECOMMENDATION_URL` in the backend `.env`; optionally set `RAPIDMINER_API_KEY`.
-- The configured service receives a `POST` JSON body `{ "userId": "<signed-in-user-id>", "limit": 8 }`; when a key is set it is sent as a Bearer token.
-- The service should return `{ "recommendations": [{ "productId": "<MongoDB-product-id>" }] }` or an array of product IDs. Only matching in-stock catalog products are returned.
-- Simulate an unavailable service or an empty/out-of-stock result; expect an HTTP 200 catalog fallback instead of a failed request.
-- Confirm missing/invalid authentication returns HTTP 401 and an invalid `limit` returns HTTP 400.
+- RapidMiner receives a **POST** JSON body containing the signed-in user ID and limit. If configured, the API key is sent as a Bearer token.
+- RapidMiner should return a `recommendations` array containing product IDs, for example `{ "recommendations": [{ "productId": "<MongoDB product ID>" }] }`.
+- Only matching in-stock products are returned. If RapidMiner is unavailable or returns no usable products, the API responds with catalog-based fallback recommendations.
+- Missing/invalid authentication should return **401**. A limit outside 1-20 should return **400**.
 
-### Step 6 - Frontend foundation
+### Steps 6-10 - Frontend and deployment checks
 
-- Start the frontend with `npm run dev`.
-- Open the Vite URL and confirm no blank screen or startup error.
-- Confirm Tailwind styles load across viewport widths.
-- Test Navbar and Footer navigation.
-- Confirm API requests use `VITE_API_URL`.
-- Confirm Axios adds a bearer token after login and handles failed requests.
+These are browser checks rather than Postman API requests:
 
-### Step 7 - Redux and authentication
-
-- Confirm login updates the auth state and persisted token.
-- Confirm logout clears auth state and private-route access.
-- Refresh the browser and confirm valid sessions restore correctly.
-- Add and remove cart items and confirm Redux state updates.
-- Test cart quantity changes and totals.
-- Place an order and confirm the order state/loading/error behavior.
-
-### Step 8 - Application pages and integration
-
-- Visit Home and confirm product data loads.
-- Open a Product Detail page and confirm the correct product appears.
-- Add a product to Cart and verify the Cart page.
-- Place an order and confirm it appears under Orders.
-- Submit valid and invalid Contact form values.
-- Test Login and registration validation.
-- Confirm recommendation results appear when available.
-
-### Step 9 - Quality and responsiveness
-
-- Run `npm run build` in the frontend and confirm it completes.
-- Run `npm run lint` in the frontend and resolve reported issues.
-- Test loading, empty, validation, and server-error states.
-- Test desktop, tablet, and mobile viewport sizes.
-- Test navigation through browser history and direct page URLs.
-- Smoke-test the complete register, login, browse, cart, checkout, and order flow.
-
-### Step 10 - Deployment readiness
-
-- Confirm both environment files use deployment-safe variables.
-- Deploy the backend and verify `/api/status`.
-- Deploy the frontend and confirm it connects to the deployed API.
-- Test login, products, cart, orders, and protected routes on the deployed app.
-- Confirm the repository contains a clear commit history.
-- Record the frontend and backend deployment URLs in `README.md`.
+- Start the frontend and check page loading, Tailwind styling, navigation, and responsive layouts.
+- Test login/logout, protected pages, cart updates, checkout, order history, form validation, and error/loading states.
+- Run the frontend build and lint checks.
+- After deployment, repeat the Postman API requests using the deployed backend URL and test the deployed site in a browser.
+- Record frontend and backend deployment URLs in this README.
 
 ## 7. Approval Gate
 
