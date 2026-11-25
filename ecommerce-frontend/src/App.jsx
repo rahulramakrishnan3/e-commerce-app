@@ -1,8 +1,18 @@
+import { useEffect } from 'react'
+import { useDispatch } from 'react-redux'
 import { Route, Routes } from 'react-router-dom'
 import SiteLayout from './components/SiteLayout.jsx'
+import ProtectedRoute from './components/ProtectedRoute.jsx'
 import RoutePlaceholder from './pages/RoutePlaceholder.jsx'
+import { loadCurrentUser } from './redux/thunks/authThunks.js'
 
 function App() {
+  const dispatch = useDispatch()
+
+  useEffect(() => {
+    dispatch(loadCurrentUser())
+  }, [dispatch])
+
   return (
     <Routes>
       <Route element={<SiteLayout />}>
@@ -52,18 +62,18 @@ function App() {
             />
           }
         />
-        <Route
-          path="orders"
-          element={
-            <RoutePlaceholder
-              eyebrow="Your account"
-              title="Order history"
-              description="Sign in to see your past and current orders."
-              linkTo="/login"
-              linkLabel="Sign in"
-            />
-          }
-        />
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path="orders"
+            element={
+              <RoutePlaceholder
+                eyebrow="Your account"
+                title="Order history"
+                description="Your order history will appear here."
+              />
+            }
+          />
+        </Route>
         <Route
           path="contact"
           element={

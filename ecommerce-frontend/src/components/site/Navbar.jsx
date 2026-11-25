@@ -1,6 +1,13 @@
 import { useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { FiMenu, FiShoppingBag, FiX } from 'react-icons/fi'
 import { Link, NavLink } from 'react-router-dom'
+import {
+  logoutUser,
+  selectCurrentUser,
+  selectIsAuthenticated,
+} from '../../redux/slices/authSlice.js'
+import { selectCartItemCount } from '../../redux/slices/cartSlice.js'
 
 const navigation = [
   { label: 'Shop', to: '/shop' },
@@ -10,11 +17,20 @@ const navigation = [
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const dispatch = useDispatch()
+  const isAuthenticated = useSelector(selectIsAuthenticated)
+  const user = useSelector(selectCurrentUser)
+  const cartItemCount = useSelector(selectCartItemCount)
 
   const linkClass = ({ isActive }) =>
     `text-sm transition-colors hover:text-[#526553] ${
       isActive ? 'text-[#526553]' : 'text-[#625f57]'
     }`
+
+  const signOut = () => {
+    dispatch(logoutUser())
+    setMenuOpen(false)
+  }
 
   return (
     <>
@@ -40,15 +56,35 @@ function Navbar() {
           </nav>
 
           <div className="hidden items-center gap-6 md:flex">
-            <NavLink className={linkClass} to="/login">
-              Sign in
-            </NavLink>
+            {isAuthenticated ? (
+              <>
+                <NavLink className={linkClass} to="/orders">
+                  {user.name}
+                </NavLink>
+                <button
+                  className="text-sm text-[#625f57] transition-colors hover:text-[#526553]"
+                  onClick={signOut}
+                  type="button"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <NavLink className={linkClass} to="/login">
+                Sign in
+              </NavLink>
+            )}
             <NavLink
               aria-label="Shopping bag"
-              className="text-[#34362f] transition-colors hover:text-[#526553]"
+              className="relative text-[#34362f] transition-colors hover:text-[#526553]"
               to="/cart"
             >
               <FiShoppingBag aria-hidden="true" size={20} />
+              {cartItemCount > 0 && (
+                <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#526553] px-1 text-[10px] text-white">
+                  {cartItemCount}
+                </span>
+              )}
             </NavLink>
           </div>
 
@@ -82,13 +118,32 @@ function Navbar() {
                 {item.label}
               </NavLink>
             ))}
-            <NavLink
-              className="rounded px-3 py-3 text-sm text-[#625f57]"
-              onClick={() => setMenuOpen(false)}
-              to="/login"
-            >
-              Sign in
-            </NavLink>
+            {isAuthenticated ? (
+              <>
+                <NavLink
+                  className="rounded px-3 py-3 text-sm text-[#625f57]"
+                  onClick={() => setMenuOpen(false)}
+                  to="/orders"
+                >
+                  {user.name}
+                </NavLink>
+                <button
+                  className="rounded px-3 py-3 text-left text-sm text-[#625f57]"
+                  onClick={signOut}
+                  type="button"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <NavLink
+                className="rounded px-3 py-3 text-sm text-[#625f57]"
+                onClick={() => setMenuOpen(false)}
+                to="/login"
+              >
+                Sign in
+              </NavLink>
+            )}
             <NavLink
               className="rounded px-3 py-3 text-sm text-[#625f57]"
               onClick={() => setMenuOpen(false)}

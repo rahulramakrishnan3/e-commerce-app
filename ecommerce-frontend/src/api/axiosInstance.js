@@ -20,7 +20,11 @@ axiosInstance.interceptors.request.use((config) => {
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const requestUrl = error.config?.url
+    const isAuthenticationRequest =
+      requestUrl === '/auth/login' || requestUrl === '/auth/register'
+
+    if (error.response?.status === 401 && !isAuthenticationRequest) {
       window.localStorage.removeItem(AUTH_TOKEN_KEY)
     }
     return Promise.reject(error)
