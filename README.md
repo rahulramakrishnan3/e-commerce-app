@@ -180,8 +180,149 @@ Implementation will proceed one phase at a time. The next phase will not begin w
 - The clothing brand name is confirmed as **Knit and Thread**.
 - A complete seeded demo catalog is allowed unless the assignment specifies a particular dataset.
 
-## 6. Approval Gate
+## 6. Testing Guide
 
-No implementation, dependency installation, file creation, or configuration change beyond this README report has been performed.
+Run each phase's tests only after that phase is complete. Keep the backend and frontend servers running in separate terminals.
 
-Please review this report and approve **Step 1** to begin.
+### Test setup
+
+1. Open a terminal in `ecommerce-backend`.
+2. Copy `.env.example` to `.env`.
+3. Set `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, and `CLIENT_URL`.
+4. Install dependencies with `npm install` if needed.
+5. Start MongoDB locally or provide a valid MongoDB Atlas connection.
+6. Run `npm start` for the backend.
+7. Open `http://localhost:5000/api/status` to verify the API process.
+
+PowerShell syntax check:
+
+```powershell
+node --check index.js
+node --check models/user.js
+node --check models/product.js
+node --check models/order.js
+```
+
+### Step 1 - Project baseline and configuration
+
+- Run `npm start` and confirm the server listens on port 5000.
+- Confirm MongoDB connects or record the missing-configuration warning.
+- Test `GET /api/status` and expect HTTP 200 with the Knit and Thread app name.
+- Test an unknown route and expect HTTP 404 JSON.
+- Confirm `.env` is excluded by Git and `.env.example` is available.
+
+### Step 2 - Backend data models
+
+- Run syntax checks for all files in `models/`.
+- Confirm the backend can connect to MongoDB.
+- Register a temporary user to validate password hashing.
+- Confirm the users, products, and orders collections can be created in MongoDB.
+- Confirm invalid required fields and out-of-range values are rejected by Mongoose validation.
+
+### Step 3 - Authentication and authorization
+
+- Send `POST /api/auth/register` with valid name, email, and password.
+- Confirm HTTP 201 and a JWT token are returned.
+- Send the same registration again and confirm HTTP 409.
+- Send `POST /api/auth/login` with valid credentials and confirm HTTP 200.
+- Send login with an incorrect password and confirm HTTP 401.
+- Send `GET /api/profile/me` without a token and confirm HTTP 401.
+- Send `GET /api/profile/me` with a valid token and confirm the current user data.
+- Update `PUT /api/profile/me` with a supported name change and confirm HTTP 200.
+- Test an admin-only route with a user token and confirm HTTP 403.
+- Test an admin-only route with an admin token and confirm access.
+- Confirm password values are never returned from profile responses.
+
+Example registration request:
+
+```powershell
+$body = @{
+  name = "Test Customer"
+  email = "customer@example.com"
+  password = "Password123!"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri "http://localhost:5000/api/auth/register" -ContentType "application/json" -Body $body
+```
+
+Example authenticated profile request:
+
+```powershell
+$token = "<JWT_TOKEN>"
+Invoke-RestMethod -Uri "http://localhost:5000/api/profile/me" -Headers @{
+  Authorization = "Bearer $token"
+}
+```
+
+### Step 4 - Product and order APIs
+
+- Create and update products with an admin token.
+- Attempt product changes with a normal user token and expect HTTP 403.
+- Fetch products with no filters and confirm a list response.
+- Test product search, category filtering, sorting, and pagination.
+- Test the product detail route using a valid product ID.
+- Place an order with a valid product and authenticated user.
+- Confirm stock, subtotal, shipping cost, and total are calculated correctly.
+- Test order tracking for the owner and reject unauthorized access.
+- Update order status with an admin token and reject status changes by normal users.
+- Test invalid product IDs, quantities, and order ownership.
+
+### Step 5 - Recommendations
+
+- Test the recommendation endpoint with a valid user or product identifier.
+- Confirm HTTP 200 with the expected recommended-product array.
+- Test RapidMiner URL/credential misconfiguration and confirm a safe fallback response.
+- Test a request where no recommendations are available.
+- Confirm recommendation failures do not crash the server.
+
+### Step 6 - Frontend foundation
+
+- Start the frontend with `npm run dev`.
+- Open the Vite URL and confirm no blank screen or startup error.
+- Confirm Tailwind styles load across viewport widths.
+- Test Navbar and Footer navigation.
+- Confirm API requests use `VITE_API_URL`.
+- Confirm Axios adds a bearer token after login and handles failed requests.
+
+### Step 7 - Redux and authentication
+
+- Confirm login updates the auth state and persisted token.
+- Confirm logout clears auth state and private-route access.
+- Refresh the browser and confirm valid sessions restore correctly.
+- Add and remove cart items and confirm Redux state updates.
+- Test cart quantity changes and totals.
+- Place an order and confirm the order state/loading/error behavior.
+
+### Step 8 - Application pages and integration
+
+- Visit Home and confirm product data loads.
+- Open a Product Detail page and confirm the correct product appears.
+- Add a product to Cart and verify the Cart page.
+- Place an order and confirm it appears under Orders.
+- Submit valid and invalid Contact form values.
+- Test Login and registration validation.
+- Confirm recommendation results appear when available.
+
+### Step 9 - Quality and responsiveness
+
+- Run `npm run build` in the frontend and confirm it completes.
+- Run `npm run lint` in the frontend and resolve reported issues.
+- Test loading, empty, validation, and server-error states.
+- Test desktop, tablet, and mobile viewport sizes.
+- Test navigation through browser history and direct page URLs.
+- Smoke-test the complete register, login, browse, cart, checkout, and order flow.
+
+### Step 10 - Deployment readiness
+
+- Confirm both environment files use deployment-safe variables.
+- Deploy the backend and verify `/api/status`.
+- Deploy the frontend and confirm it connects to the deployed API.
+- Test login, products, cart, orders, and protected routes on the deployed app.
+- Confirm the repository contains a clear commit history.
+- Record the frontend and backend deployment URLs in `README.md`.
+
+## 7. Approval Gate
+
+Steps 1 through 3 are complete. Implementation is paused before Step 4.
+
+Please approve **Step 4** to begin the product and order API implementation.
