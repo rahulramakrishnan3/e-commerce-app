@@ -6,6 +6,8 @@ const express = require("express");
 const dbConnection = require("./config/dbConnection");
 const { errorHandler, notFound } = require("./middleware/errorHandler");
 const authenticationRoutes = require("./routes/authenticationRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const productRoutes = require("./routes/productRoutes");
 const userProfileRoutes = require("./routes/userProfileRoutes");
 
 const app = express();
@@ -27,6 +29,8 @@ app.get("/api/status", (_req, res) => {
 
 app.use("/api/auth", authenticationRoutes);
 app.use("/api/profile", userProfileRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/orders", orderRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

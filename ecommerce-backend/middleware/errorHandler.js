@@ -1,4 +1,25 @@
 const errorHandler = (error, _req, res, _next) => {
+  if (error.name === "ValidationError") {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+
+  if (error.name === "CastError") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid value provided",
+    });
+  }
+
+  if (error.code === 11000) {
+    return res.status(409).json({
+      success: false,
+      message: "A record with the supplied unique value already exists",
+    });
+  }
+
   const statusCode = error.statusCode || error.status || 500;
   const message =
     process.env.NODE_ENV === "production" && statusCode === 500

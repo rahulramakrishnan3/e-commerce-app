@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-11-25  
 **Source requirement:** `prompt.md`  
-**Status:** Analysis and planning only; implementation has not started.
+**Status:** Steps 1-4 implemented; Step 5 is awaiting approval.
 
 ## 1. Requirements Summary
 
@@ -24,16 +24,17 @@ Build a complete MERN e-commerce application with:
 
 The required backend structure includes `index.js`, `config`, `models`, `controllers`, `routes`, and `middleware`. The frontend structure includes `api`, Redux store/slices/thunks, components, and pages.
 
-## 2. Current Baseline
+## 2. Initial Baseline
+
+The following describes the repository when this report was first prepared.
 
 ### Backend
 
 - Dependencies for Express, Mongoose, CORS, dotenv, bcryptjs, and JSON Web Tokens are installed.
 - `server.js` starts an Express server on `PORT` or port 5000.
-- A basic `GET /api/status` endpoint is present.
-- MongoDB connection setup is missing.
-- Required models, controllers, routes, middleware, and authorization logic are missing.
-- Backend `.env` and `.gitignore` files are missing.
+- A basic status endpoint was present.
+- MongoDB connection setup, application models, controllers, routes, and authorization logic were missing.
+- Backend environment templates were missing.
 
 ### Frontend
 
@@ -46,10 +47,17 @@ The required backend structure includes `index.js`, `config`, `models`, `control
 ### Repository
 
 - Git is initialized and the current branch is `main`.
-- `prompt.md` is currently untracked.
-- No implementation changes have been made yet.
+- `prompt.md` was untracked at report creation.
 
-## 2.1. Confirmed Product Requirements
+## 2.1. Current Implementation
+
+- Backend startup, MongoDB connection, status endpoint, and centralized error handling are implemented.
+- User, product, and order Mongoose models are implemented.
+- JWT authentication, profile routes, and role-based access control are implemented.
+- Product CRUD/search/filter/sort and order placement/tracking/status APIs are implemented.
+- Frontend work has not started.
+
+## 2.2. Confirmed Product Requirements
 
 - The application will represent the clothing brand **Knit and Thread**.
 - The frontend will use **Tailwind CSS** for styling and responsive design.
@@ -81,8 +89,6 @@ Implementation will proceed one phase at a time. The next phase will not begin w
 - [x] Verify the backend starts with the status route configured.
 
 **Step 1 status:** Complete. Startup confirmed on port 5000; the sandbox blocked loopback HTTP verification.
-**Step 2 status:** Awaiting approval.
-**Approval required before Step 2:** Yes
 
 ### Step 2 - Backend data models
 
@@ -92,8 +98,6 @@ Implementation will proceed one phase at a time. The next phase will not begin w
 - [x] Establish required schema relationships.
 
 **Step 2 status:** Complete.
-**Step 3 status:** Awaiting approval.
-**Approval required before Step 3:** Yes
 
 ### Step 3 - Authentication and authorization
 
@@ -103,17 +107,17 @@ Implementation will proceed one phase at a time. The next phase will not begin w
 - [x] Implement user profile CRUD routes.
 
 **Step 3 status:** Complete.
-**Step 4 status:** Awaiting approval.
-**Approval required before Step 4:** Yes
 
 ### Step 4 - Product and order APIs
 
-- [ ] Implement product CRUD.
-- [ ] Implement product search, filtering, and sorting.
-- [ ] Implement order placement, updates, and tracking.
-- [ ] Restrict administrative operations through RBAC.
+- [x] Implement product CRUD.
+- [x] Implement product search, filtering, and sorting.
+- [x] Implement order placement, updates, and tracking.
+- [x] Restrict administrative operations through RBAC.
 
-**Approval required before Step 4:** Yes
+**Step 4 status:** Complete.
+**Step 5 status:** Awaiting approval.
+**Approval required before Step 5:** Yes
 
 ### Step 5 - Recommendations
 
@@ -203,6 +207,12 @@ node --check models/product.js
 node --check models/order.js
 ```
 
+Run the backend unit tests:
+
+```powershell
+npm test
+```
+
 ### Step 1 - Project baseline and configuration
 
 - Run `npm start` and confirm the server listens on port 5000.
@@ -256,16 +266,78 @@ Invoke-RestMethod -Uri "http://localhost:5000/api/profile/me" -Headers @{
 
 ### Step 4 - Product and order APIs
 
-- Create and update products with an admin token.
-- Attempt product changes with a normal user token and expect HTTP 403.
-- Fetch products with no filters and confirm a list response.
-- Test product search, category filtering, sorting, and pagination.
-- Test the product detail route using a valid product ID.
-- Place an order with a valid product and authenticated user.
-- Confirm stock, subtotal, shipping cost, and total are calculated correctly.
-- Test order tracking for the owner and reject unauthorized access.
-- Update order status with an admin token and reject status changes by normal users.
-- Test invalid product IDs, quantities, and order ownership.
+Run `npm test`; the controller tests cover unsupported product sorting, server-authoritative order pricing, inventory reservation, and invalid order items. For end-to-end testing, use a running MongoDB instance and the manual API checks below.
+
+First promote a local test account to admin in MongoDB (for example, edit its `role` field to `admin` in MongoDB Compass), then log in again and use the fresh token. Public registration intentionally does not allow assigning an admin role.
+
+Create a product as admin:
+
+```powershell
+$adminHeaders = @{ Authorization = "Bearer <ADMIN_JWT>" }
+$productBody = @{
+  name = "Everyday Knit Sweater"
+  description = "Soft cotton knit sweater"
+  category = "Sweaters"
+  price = 49.99
+  stock = 10
+  sizes = @("S", "M", "L")
+  colors = @("Oatmeal", "Navy")
+} | ConvertTo-Json
+
+$created = Invoke-RestMethod -Method Post `
+  -Uri "http://localhost:5000/api/products" `
+  -Headers $adminHeaders -ContentType "application/json" -Body $productBody
+$productId = $created.product._id
+```
+
+Test product listing and filtering:
+
+```powershell
+Invoke-RestMethod "http://localhost:5000/api/products?search=knit&category=Sweaters&minPrice=20&sort=price&order=asc&page=1&limit=10"
+Invoke-RestMethod "http://localhost:5000/api/products/$productId"
+```
+
+Product creation, update, and deletion require an admin token. Try creating a product with a regular user token and expect HTTP 403. Invalid sort fields, price ranges, pagination, and product IDs should return a 400 response.
+
+Place an order as an authenticated user:
+
+```powershell
+$userHeaders = @{ Authorization = "Bearer <USER_JWT>" }
+$orderBody = @{
+  items = @(@{ product = $productId; quantity = 1; size = "M"; color = "Navy" })
+  shippingAddress = @{
+    fullName = "Test Customer"
+    addressLine1 = "10 Example Street"
+    city = "Toronto"
+    state = "Ontario"
+    postalCode = "A1A 1A1"
+    country = "Canada"
+    phone = "555-0100"
+  }
+  paymentMethod = "cash_on_delivery"
+} | ConvertTo-Json -Depth 5
+
+$placed = Invoke-RestMethod -Method Post `
+  -Uri "http://localhost:5000/api/orders" `
+  -Headers $userHeaders -ContentType "application/json" -Body $orderBody
+$orderId = $placed.order._id
+```
+
+Confirm the order total is calculated from the database product price and stock decreases by the ordered quantity. Shipping is currently free (`shippingCost` is zero); no payment processor is connected.
+
+Test order retrieval and administration:
+
+```powershell
+Invoke-RestMethod "http://localhost:5000/api/orders" -Headers $userHeaders
+Invoke-RestMethod "http://localhost:5000/api/orders/$orderId" -Headers $userHeaders
+
+$statusBody = @{ status = "confirmed" } | ConvertTo-Json
+Invoke-RestMethod -Method Patch `
+  -Uri "http://localhost:5000/api/orders/$orderId/status" `
+  -Headers $adminHeaders -ContentType "application/json" -Body $statusBody
+```
+
+Also verify that another regular user cannot retrieve the order (HTTP 403), regular users cannot change its status (HTTP 403), invalid quantities/product IDs are rejected, and an admin cancellation restores the ordered stock.
 
 ### Step 5 - Recommendations
 
@@ -323,6 +395,6 @@ Invoke-RestMethod -Uri "http://localhost:5000/api/profile/me" -Headers @{
 
 ## 7. Approval Gate
 
-Steps 1 through 3 are complete. Implementation is paused before Step 4.
+Steps 1 through 4 are complete. Implementation is paused before Step 5.
 
-Please approve **Step 4** to begin the product and order API implementation.
+Please approve **Step 5** to begin the RapidMiner recommendation integration.
